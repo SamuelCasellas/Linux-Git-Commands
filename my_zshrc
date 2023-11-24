@@ -1,0 +1,135 @@
+# helpful aliases
+alias c="clear"
+alias erc="vim ~/.zshrc"
+
+### Git ###
+alias gb="git branch"
+alias gs="git status"
+alias gl="git log"
+alias gca="git commit --amend --no-edit" 
+alias gcadda="git add . && git commit --amend --no-edit" 
+alias gf="git fetch"
+alias gu="git fetch && git pull" 
+alias gsl="git stash list"
+alias grst="git reset --hard HEAD"
+# geo = git "experiment over" (for checking out a remote branch/previous commit in a detached HEAD state)
+alias geo="git switch -"
+
+git-reset-file () {
+  gs=$(git status)
+  # Use awk to filter and process the lines
+  # Usage:
+  # /matching lines/ {sub(/sub_pattern/}, "sub_to_this"
+  file_names=$(echo "$gs" | awk '/modified:/ {sub(/^.*modified:[[:space:]]/, ""); print}')
+  echo $file_names | nl
+  read file_n
+  file_name=$(echo "$file_names" | sed -n "${file_n}p")
+  # Remove leading whitespace
+file_name="${file_name#"${file_name%%[![:space:]]*}"}"
+# Remove trailing whitespace
+file_name="${file_name%"${file_name##*[![:space:]]}"}" 
+  if [ -z "$file_name" ]; then
+    echo "No file #$file_n"
+  else
+    git checkout HEAD -- $file_name
+  fi
+}
+alias grf="git-reset-file"
+
+git-checkout () {
+  branches=$(git branch)
+  echo $branches | nl 
+  read branch_n
+  branch_name=$(echo "$branches" | sed -n "${branch_n}p")
+  # Using parameter expansion to trim leading whitespace
+  branch_name="${branch_name##*([[:space:]])}"
+  # Using parameter expansion to trim trailing whitespace
+  branch_name="${branch_name%%*([[:space:]])}"
+  git checkout "$branch_name"
+}
+alias gc="git-checkout"
+
+git-branch-delete () {
+  branches=$(git branch)
+  echo "$branches" | nl
+  
+  echo -n "Enter the number of the branch you want to delete: " 
+  read branch_n
+  branch_name=$(echo "$branches" | sed -n "${branch_n}p")
+  branch_name="${branch_name##*([[:space:]])}"
+  # Using parameter expansion to trim trailing whitespace
+  branch_name="${branch_name%%*([[:space:]])}"
+  echo -n "Are you sure you want to delete branch '$branch_name'? (Y): "
+  read confirmation 
+  if [ "$confirmation" = "Y" ]; then
+    # Check if the branch is fully merged
+    if ! git branch --merged | grep -q "$branch_name"; then
+      echo -n "The branch '$branch_name' is not fully merged. Are you sure you want to delete it? (Y): "
+      read confirmation 
+      if [ "$confirmation" != "Y" ]; then
+        echo "Branch deletion canceled."
+        return
+      else
+        git branch -D "$branch_name"
+        return
+      fi
+    fi
+    # Attempt to delete the branch
+    git branch -d "$branch_name"
+  else
+    echo "Branch deletion canceled."
+  fi
+}
+alias gbd="git-branch-delete"
+
+git-checkout-new-branch () {
+  name=${1}
+  git checkout -b $name
+}
+alias gcb="git-checkout-new-branch"
+
+git-stash-save () {
+  name=${1}
+  git stash save $name
+}
+alias gss="git-stash-save"
+
+git-stash-apply () {
+  stash=$(gsl)
+  if [ -z "$stash" ]; then
+    echo "Nothing in stash to apply"
+  else
+    echo $stash
+    read n
+    git stash apply stash@{$n}
+  fi
+}
+alias gsa="git-stash-apply"
+
+git-stash-pop () {
+  stash=$(gsl)
+  if [ -z "$stash" ]; then
+    echo "Nothing in stash to pop"
+  else
+    echo $stash
+    read n
+    git stash pop stash@{$n}
+  fi
+}
+alias gsp="git-stash-pop"
+
+
+git-stash-drop () {
+  stash=$(gsl)
+  if [ -z "$stash" ]; then
+    echo "Nothing in stash to drop"
+  else
+    echo $stash 
+    read n
+    git stash drop stash@{$n}
+  fi
+}
+alias gsd="git-stash-drop"
+
+### Miscellaneous ###
+alias bu="brew update;brew outdated;brew upgrade"
